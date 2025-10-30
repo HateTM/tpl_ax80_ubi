@@ -98,6 +98,9 @@ SUBDIR:=$(patsubst $(TOPDIR)/%,%,${CURDIR})
 BUILD_SUBDIR:=$(patsubst $(TOPDIR)/%,%,${CURDIR})
 NPROC=$(shell sysctl -n hw.ncpu 2>/dev/null || nproc)
 export SHELL:=/usr/bin/env bash
+DATE:=$(shell date --utc +%Y-%m-%d)
+VERSION_CODE:=$(call qstrip,$(CONFIG_VERSION_CODE))
+VERSION_CODE:=$(if $(VERSION_CODE),$(VERSION_CODE),$(REVISION))
 
 IS_PACKAGE_BUILD := $(if $(filter package/%,$(BUILD_SUBDIR)),1)
 
@@ -147,7 +150,7 @@ $(foreach t,$(DEFAULT_SUBDIR_TARGETS) $(1),
 endef
 
 DL_DIR=$(if $(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(call qstrip,$(CONFIG_DOWNLOAD_FOLDER)),$(TOPDIR)/dl)$(if $(DL_SUBDIR),/$(DL_SUBDIR))
-OUTPUT_DIR:=$(if $(call qstrip,$(CONFIG_BINARY_FOLDER)),$(call qstrip,$(CONFIG_BINARY_FOLDER)),$(TOPDIR)/bin)
+OUTPUT_DIR:=$(if $(call qstrip,$(CONFIG_BINARY_FOLDER)),$(call qstrip,$(CONFIG_BINARY_FOLDER)),$(TOPDIR)/bin/$(DATE)_$(VERSION_CODE)_$(BRANCH))
 BIN_DIR:=$(OUTPUT_DIR)/targets/$(BOARD)/$(SUBTARGET)
 INCLUDE_DIR:=$(TOPDIR)/include
 SCRIPT_DIR:=$(TOPDIR)/scripts
@@ -515,6 +518,7 @@ define commitcount
 $(shell \
   if git log -1 --no-show-signature >/dev/null 2>/dev/null; then \
     if [ -n "$(1)" ]; then \
+      $(call ERROR_MESSAGE,DEPRECATION NOTICE: The use of AUTORELEASE has been deprecated. Fix your Makefile.); \
       last_bump="$$(git log --no-show-signature --pretty=format:'%h %s' . | \
         grep -m 1 -e ': [uU]pdate to ' -e ': [bB]ump to ' | \
         cut -f 1 -d ' ')"; \
