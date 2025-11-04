@@ -4,6 +4,7 @@
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/leds/common.h>
+#include <dt-bindings/pinctrl/mt65xx.h>
 
 #include "mt7986b.dtsi"
 
@@ -13,10 +14,6 @@
 
 	aliases {
 		serial0 = &uart0;
-		led-boot = &led_b;
-		led-failsafe = &led_r;
-		led-running = &led_b;
-		led-upgrade = &led_g;
 	};
 
 	chosen {
@@ -25,9 +22,10 @@
 
 	memory@40000000 {
 		reg = <0 0x40000000 0 0x20000000>;
+		device_type = "memory";
 	};
 
-	gpio-keys {
+	keys {
 		compatible = "gpio-keys";
 
 		button-reset {
@@ -36,22 +34,16 @@
 			gpios = <&pio 7 GPIO_ACTIVE_LOW>;
 		};
 
-		button-ledswitch {
-			label = "ledswitch";
-			linux,code = <KEY_BRIGHTNESS_ZERO>;
-			gpios = <&pio 10 GPIO_ACTIVE_LOW>;
-		};
-
 		button-wps {
 			label = "wps";
 			linux,code = <KEY_WPS_BUTTON>;
-			gpios = <&pio 16 GPIO_ACTIVE_LOW>;
+			gpios = <&pio 14 GPIO_ACTIVE_LOW>;
 		};
 
 		button-wifi {
 			label = "wlan";
 			linux,code = <KEY_WLAN>;
-			gpios = <&pio 9 GPIO_ACTIVE_LOW>;
+			gpios = <&pio 20 GPIO_ACTIVE_LOW>;
 		};
 	};
 
@@ -124,10 +116,10 @@
 			reg = <6>;
 		};
 
-		switch@0 {
+		switch@1f {
 			compatible = "mediatek,mt7531";
 			reg = <31>;
-			reset-gpios = <&pio 5 GPIO_ACTIVE_HIGH>;
+			reset-gpios = <&pio 5 GPIO_ACTIVE_LOW>;
 			interrupt-controller;
 			#interrupt-cells = <1>;
 			interrupt-parent = <&pio>;
@@ -167,43 +159,6 @@
 	};
 };
 
-&i2c0 {
-	status = "okay";
-
-	lp55231: led-controller@32 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		compatible = "ti,lp55231";
-		reg = <0x32>;
-		status = "okay";
-		clock-mode = /bits/ 8 <1>;
-
-		led_b: led@0 {
-			chan-name = "B";
-			led-cur = /bits/ 8 <0x14>;
-			max-cur = /bits/ 8 <0x20>;
-			reg = <0>;
-			color = <LED_COLOR_ID_BLUE>;
-		};
-
-		led_g: led@3 {
-			chan-name = "G";
-			led-cur = /bits/ 8 <0x14>;
-			max-cur = /bits/ 8 <0x20>;
-			reg = <3>;
-			color = <LED_COLOR_ID_GREEN>;
-		};
-
-		led_r: led@6 {
-			chan-name = "R";
-			led-cur = /bits/ 8 <0x14>;
-			max-cur = /bits/ 8 <0x20>;
-			reg = <6>;
-			color = <LED_COLOR_ID_RED>;
-		};
-
-	};
-};
 &spi0 {
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi_flash_pins>;
@@ -211,6 +166,8 @@
 
 	flash@0 {
 		compatible = "spi-nand";
+		#address-cells = <1>;
+		#size-cells = <1>;
 		reg = <0>;
 
 		spi-max-frequency = <52000000>;
@@ -231,13 +188,13 @@
 
 			partition@0 {
 				label = "boot";
-				reg = <0x00000 0x0200000>;
+				reg = <0x0 0x200000>;
 				read-only;
 			};
 
 			partition@200000 {
 				label = "u-boot-env";
-				reg = <0x0200000 0x0100000>;
+				reg = <0x200000 0x100000>;
 			};
 
 			partition@300000 {
@@ -255,9 +212,10 @@
 				reg = <0x6700000 0x800000>;
 			};
 
-			factory:partition@6f00000 {
+			partition@6f00000 {
 				label = "tp_data";
 				reg = <0x6f00000 0x400000>;
+				read-only;
 			};
 
             partition@7300000 {
@@ -276,15 +234,16 @@
 		};
 		conf-pu {
 			pins = "SPI2_CS", "SPI2_HOLD", "SPI2_WP";
-			drive-strength = <4>;
-			mediatek,pull-up-adv = <0>;
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-disable; /* bias-disable */
 		};
 		conf-pd {
 			pins = "SPI2_CLK", "SPI2_MOSI", "SPI2_MISO";
-			drive-strength = <4>;
-			mediatek,pull-down-adv = <0>;
+			drive-strength = <MTK_DRIVE_8mA>;
+			bias-disable; /* bias-disable */
 		};
 	};
+
 	wf_2g_5g_pins: wf_2g_5g-pins {
 		mux {
 			function = "wifi";
@@ -292,13 +251,13 @@
 		};
 		conf {
 			pins = "WF0_HB1", "WF0_HB2", "WF0_HB3", "WF0_HB4",
-			"WF0_HB0", "WF0_HB0_B", "WF0_HB5", "WF0_HB6",
-			"WF0_HB7", "WF0_HB8", "WF0_HB9", "WF0_HB10",
-			"WF0_TOP_CLK", "WF0_TOP_DATA", "WF1_HB1",
-			"WF1_HB2", "WF1_HB3", "WF1_HB4", "WF1_HB0",
-			"WF1_HB5", "WF1_HB6", "WF1_HB7", "WF1_HB8",
-			"WF1_TOP_CLK", "WF1_TOP_DATA";
-			drive-strength = <4>;
+			       "WF0_HB0", "WF0_HB0_B", "WF0_HB5", "WF0_HB6",
+			       "WF0_HB7", "WF0_HB8", "WF0_HB9", "WF0_HB10",
+			       "WF0_TOP_CLK", "WF0_TOP_DATA", "WF1_HB1",
+			       "WF1_HB2", "WF1_HB3", "WF1_HB4", "WF1_HB0",
+			       "WF1_HB5", "WF1_HB6", "WF1_HB7", "WF1_HB8",
+			       "WF1_TOP_CLK", "WF1_TOP_DATA";
+			drive-strength = <MTK_DRIVE_4mA>;
 		};
 	};
 };
