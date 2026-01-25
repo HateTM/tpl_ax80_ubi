@@ -2610,6 +2610,7 @@ define Device/tplink_archer-ax80-v1-ubi
   ARTIFACT/bl31-uboot.fip := mt7986-bl31-uboot tplink_archer-ax80-v1-ubi
   ARTIFACT/preloader.bin := mt7986-bl2 spim-nand-ubi-ddr3
 endef
+TARGET_DEVICES += tplink_archer-ax80-v1-ubi
 
 define Device/tplink_be450
 	DEVICE_VENDOR := TP-Link
