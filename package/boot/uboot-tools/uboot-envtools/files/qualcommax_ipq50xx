@@ -8,6 +8,7 @@ touch /etc/config/ubootenv
 board=$(board_name)
 
 case "$board" in
+mercusys,mr80x-v2|\
 cmcc,pz-l8|\
 elecom,wrc-x3000gs2|\
 iodata,wn-dax3000gr|\

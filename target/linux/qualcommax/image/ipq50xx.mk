@@ -32,6 +32,23 @@ define Device/cmcc_pz-l8
 endef
 TARGET_DEVICES += cmcc_pz-l8
 
+define Device/mercusys_mr80x-v2
+	$(call Device/FitImage)
+	$(call Device/UbiFit)
+	DEVICE_VENDOR := MERCUSYS
+	DEVICE_MODEL := MR80X
+	DEVICE_VARIANT := V2
+	DEVICE_DTS_CONFIG := config@mp02.1
+	SOC := ipq5018
+	BLOCKSIZE := 128k
+	PAGESIZE := 2048
+	IMAGE_SIZE := 59392k
+	NAND_SIZE := 128m
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
+		ipq-wifi-mercusys_mr80x-v2
+endef
+TARGET_DEVICES += mercusys_mr80x-v2
+
 define Device/elecom_wrc-x3000gs2
 	$(call Device/FitImageLzma)
 	DEVICE_VENDOR := ELECOM
