@@ -138,7 +138,7 @@
 				
 				partition@0 {
 					label = "env-data";
-					reg = <0x0 0x80000>;
+					reg = <0x0 0x40000>;
 					
 					nvmem-layout {
 						compatible = "u-boot,env";
@@ -156,17 +156,17 @@
 
 &switch {
 	status = "okay";
-	
-	switch_mac_mode = <MAC_MODE_SGMII_CHANNEL0>;
-	
+
+	switch_mac_mode = <0x0c>; // MAC_MODE_SGMII_CHANNEL0, если есть define
+
 	qcom,port_phyinfo {
-		port@0 {
+		port@1 {
 			port_id = <1>;
 			mdiobus = <&mdio0>;
 			phy_address = <7>;
 		};
-		
-		port@1 {
+
+		port@2 {
 			port_id = <2>;
 			forced-speed = <2500>;
 			forced-duplex = <1>;
@@ -176,18 +176,25 @@
 
 &dp1 {
 	status = "okay";
-	
 	label = "wan";
 	nvmem-cells = <&macaddr_appsblenv_ethaddr 3>;
 	nvmem-cell-names = "mac-address";
+
+	phy-mode = "sgmii";
+	qcom,id = <1>;
+	qcom,link-poll = <1>;
+	qcom,mactype = <2>;
+	qcom,phy-mdio-addr = <7>;
 };
 
 &dp2 {
 	status = "okay";
-	
 	nvmem-cells = <&macaddr_appsblenv_ethaddr 0>;
 	nvmem-cell-names = "mac-address";
-	
+
+	phy-mode = "sgmii";
+	qcom,id = <2>;
+	qcom,mactype = <2>;
 	fixed-link {
 		speed = <2500>;
 		full-duplex;
@@ -200,71 +207,60 @@
 
 &mdio1 {
 	status = "okay";
-	
 	pinctrl-0 = <&mdio1_pins>, <&switch_reset_pins>;
 	pinctrl-names = "default";
 	reset-gpios = <&tlmm 27 GPIO_ACTIVE_LOW>;
-	
-	qca8337_0: ethernet-phy@0 {
+
+	qca8327_0: ethernet-phy@0 {
 		reg = <0>;
 	};
-	
-	qca8337_1: ethernet-phy@1 {
+
+	qca8327_1: ethernet-phy@1 {
 		reg = <1>;
 	};
-	
-	qca8337_2: ethernet-phy@2 {
+
+	qca8327_2: ethernet-phy@2 {
 		reg = <2>;
 	};
-	
-	qca8337_3: ethernet-phy@3 {
+
+	qca8327_3: ethernet-phy@3 {
 		reg = <3>;
 	};
-	
-	ethernet-switch@18 {
-		compatible = "qca,qca8337";
-		reg = <0x18>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		
+
+	ethernet-switch@1 {
+		compatible = "qcom,ess-switch-qca83xx";
+		reg = <0x1>;
+		device_id = <1>;
+		switch_access_mode = "mdio";
+		switch_cpu_bmp = <0x40>;
+		switch_lan_bmp = <0x1e>;
+		switch_wan_bmp = <0x00>;
+		reset_gpio = <27>;
+		qca,ar8327-initvals = <0x04 0x7600000 0x08 0x1000000 0x0c 0x80 0x10 0x2613a0 0xe4 0xaa545 0xe0 0xc74164de 0x7c 0x4e 0x94 0x4e>;
+
 		ports {
 			#address-cells = <1>;
 			#size-cells = <0>;
-			
+
 			port@1 {
 				reg = <1>;
 				label = "lan1";
-				phy-handle = <&qca8337_0>;
+				phy-handle = <&qca8327_0>;
 			};
-			
 			port@2 {
 				reg = <2>;
 				label = "lan2";
-				phy-handle = <&qca8337_1>;
+				phy-handle = <&qca8327_1>;
 			};
-			
 			port@3 {
 				reg = <3>;
 				label = "lan3";
-				phy-handle = <&qca8337_2>;
+				phy-handle = <&qca8327_2>;
 			};
-			
 			port@4 {
 				reg = <4>;
 				label = "lan4";
-				phy-handle = <&qca8337_3>;
-			};
-			
-			port@6 {
-				reg = <6>;
-				phy-mode = "sgmii";
-				ethernet = <&dp2>;
-				qca,sgmii-enable-pll;
-				
-				fixed-link {
-					speed = <2500>;
-					full-duplex;
-				};
+				phy-handle = <&qca8327_3>;
 			};
 		};
 	};
