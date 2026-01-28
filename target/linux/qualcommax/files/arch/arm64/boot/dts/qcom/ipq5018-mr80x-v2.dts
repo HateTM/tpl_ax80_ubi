@@ -23,7 +23,7 @@
 	};
 	
 	chosen {
-		bootargs-append = " root=/dev/ubiblock0_1 coherent_pool=2M";
+		bootargs-append = "ubi.block=0,rootfs root=/dev/ubiblock0_1";
 		stdout-path = "serial0:115200n8";
 	};
 	
@@ -116,39 +116,17 @@
 	pinctrl-names = "default";
 	status = "okay";
 	
-	flash@0 {
+	nand@0 {
 		compatible = "spi-nand";
 		reg = <0>;
 		nand-ecc-engine = <&qpic_nand>;
 		
-		/* strength=8 breaks NAND I/O, use 4 instead */
 		nand-ecc-strength = <4>;
 		nand-ecc-step-size = <512>;
 		nand-bus-width = <8>;
 		
 		partitions {
 			compatible = "qcom,smem-part";
-			
-			partition-0-appsblenv {
-				compatible = "fixed-partitions";
-				label = "0:appsblenv";
-				#address-cells = <1>;
-				#size-cells = <1>;
-				
-				partition@0 {
-					label = "env-data";
-					reg = <0x0 0x40000>;
-					
-					nvmem-layout {
-						compatible = "u-boot,env";
-						
-						macaddr_appsblenv_ethaddr: ethaddr {
-							compatible = "mac-base";
-							#nvmem-cell-cells = <1>;
-						};
-					};
-				};
-			};
 		};
 	};
 };
@@ -159,26 +137,24 @@
 	switch_mac_mode = <MAC_MODE_SGMII_CHANNEL0>;
 
 	qcom,port_phyinfo {
-		port@1 {
+		port@0 {
 			port_id = <1>;
 			mdiobus = <&mdio0>;
 			phy_address = <7>;
 		};
 
-		port@2 {
+		port@1 {
 			port_id = <2>;
+			mdiobus = <&mdio1>;
 			forced-speed = <1000>;
 			forced-duplex = <1>;
 		};
 	};
 };
-
+&dp1 {status = "okay";
+};
 &dp2 {
 	status = "okay";
-
-	nvmem-cells = <&macaddr_appsblenv_ethaddr 0>;
-	nvmem-cell-names = "mac-address";
-
 	fixed-link {
 		speed = <1000>;
 		full-duplex;
@@ -196,7 +172,7 @@
 	pinctrl-names = "default";
 	reset-gpios = <&tlmm 27 GPIO_ACTIVE_LOW>;
 
-	switch1: ethernet-switch@17 {
+	switch1: ethernet-switch@16 {
 		compatible = "qca,qca8337";
 		reg = <16>;
 		#address-cells = <1>;
@@ -206,10 +182,34 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
+			port@0 {
+				reg = <0>;
+				phy-handle = <&qca8337_1>;
+				phy-mode = "internal";
+
+				leds {
+					#address-cells = <1>;
+					#size-cells = <0>;
+
+					led@0 {
+						reg = <0>;
+						color = <LED_COLOR_ID_GREEN>;
+						function = LED_FUNCTION_LAN;
+						default-state = "keep";
+					};
+
+					led@1 {
+						reg = <1>;
+						color = <LED_COLOR_ID_AMBER>;
+						function = LED_FUNCTION_LAN;
+						default-state = "keep";
+					};
+				};
+			};
+
 			port@1 {
 				reg = <1>;
-				label = "lan1";
-				phy-handle = <&qca8337_0>;
+				phy-handle = <&qca8337_2>;
 				phy-mode = "internal";
 
 				leds {
@@ -234,8 +234,7 @@
 
 			port@2 {
 				reg = <2>;
-				label = "lan2";
-				phy-handle = <&qca8337_1>;
+				phy-handle = <&qca8337_3>;
 				phy-mode = "internal";
 
 				leds {
@@ -260,34 +259,7 @@
 
 			port@3 {
 				reg = <3>;
-				label = "lan3";
-				phy-handle = <&qca8337_2>;
-				phy-mode = "internal";
-
-				leds {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					led@0 {
-						reg = <0>;
-						color = <LED_COLOR_ID_GREEN>;
-						function = LED_FUNCTION_LAN;
-						default-state = "keep";
-					};
-
-					led@1 {
-						reg = <1>;
-						color = <LED_COLOR_ID_AMBER>;
-						function = LED_FUNCTION_LAN;
-						default-state = "keep";
-					};
-				};
-			};
-
-			port@4 {
-				reg = <4>;
-				label = "wan";
-				phy-handle = <&qca8337_3>;
+				phy-handle = <&qca8337_4>;
 				phy-mode = "internal";
 
 				leds {
@@ -346,6 +318,9 @@
 			// QCA8337 Phy3 -> WAN
 			qca8337_3: ethernet-phy@3 {
 				reg = <3>;
+			};
+			qca8337_4: ethernet-phy@4 {
+				reg = <4>;
 			};
 		};
 	};
@@ -410,39 +385,4 @@
 		function = "blsp0_uart0";
 		bias-disable;
 	};
-	
-	switch_reset_pins: switch-reset-state {
-		pins = "gpio27";
-		function = "gpio";
-		drive-strength = <8>;
-		bias-pull-down;
-	};
-};
-&q6v5_wcss {
-	status = "okay";
-};
-
-&wifi {
-	status = "okay";
-	
-	qcom,rproc = <&q6_wcss_pd1>;
-	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
-	qcom,ath11k-calibration-variant = "MERCUSYS-MR80X-V2";
-	qcom,ath11k-fw-memory-mode = <2>;
-	qcom,bdf-addr = <0x4c000000>;
-	
-	ieee80211-freq-limit = <2400000 2483000>;
-};
-
-&wifi1 {
-	status = "okay";
-	
-	qcom,rproc = <&q6_wcss_pd2>;
-	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
-	qcom,ath11k-calibration-variant = "MERCUSYS-MR80X-V2";
-	qcom,ath11k-fw-memory-mode = <2>;
-	qcom,bdf-addr = <0x4d100000>;
-	qcom,m3-dump-addr = <0x4de00000>;
-	
-	ieee80211-freq-limit = <5150000 5730000>;
 };
