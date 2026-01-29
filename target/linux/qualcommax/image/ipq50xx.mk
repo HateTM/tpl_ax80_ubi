@@ -35,7 +35,7 @@ TARGET_DEVICES += cmcc_pz-l8
 define Device/mercusys_mr80x-v2
 	$(call Device/FitImageLzma)
 	$(call Device/UbiFit)
-	DEVICE_VENDOR := MERCUSYS
+	DEVICE_VENDOR := Mercusys
 	DEVICE_MODEL := MR80X
 	DEVICE_VARIANT := V2
 	DEVICE_DTS_CONFIG := config@mp02.1
