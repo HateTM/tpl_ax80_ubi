@@ -33,7 +33,7 @@ endef
 TARGET_DEVICES += cmcc_pz-l8
 
 define Device/mercusys_mr80x-v2
-	$(call Device/FitImage)
+	$(call Device/FitImageLzma)
 	$(call Device/UbiFit)
 	DEVICE_VENDOR := MERCUSYS
 	DEVICE_MODEL := MR80X
@@ -42,10 +42,7 @@ define Device/mercusys_mr80x-v2
 	SOC := ipq5018
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
-	IMAGE_SIZE := 59392k
-	NAND_SIZE := 128m
-	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
-		ipq-wifi-mercusys_mr80x-v2
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122
 endef
 TARGET_DEVICES += mercusys_mr80x-v2
 

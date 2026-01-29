@@ -23,7 +23,7 @@
 	};
 	
 	chosen {
-		bootargs-append = "ubi.block=0,rootfs root=/dev/ubiblock0_1";
+		bootargs-append = " root=/dev/ubiblock0_1 swiotlb=1 coherent_pool=2M";
 		stdout-path = "serial0:115200n8";
 	};
 	
@@ -120,9 +120,6 @@
 		compatible = "spi-nand";
 		reg = <0>;
 		nand-ecc-engine = <&qpic_nand>;
-		
-		nand-ecc-strength = <4>;
-		nand-ecc-step-size = <512>;
 		nand-bus-width = <8>;
 		
 		partitions {
@@ -132,33 +129,33 @@
 };
 
 &switch {
-	status = "okay";
-
+	status = "ok";
+	
 	switch_mac_mode = <MAC_MODE_SGMII_CHANNEL0>;
-
+	
 	qcom,port_phyinfo {
 		port@0 {
 			port_id = <1>;
 			mdiobus = <&mdio0>;
 			phy_address = <7>;
 		};
-
 		port@1 {
-			port_id = <2>;
-			forced-speed = <1000>;
 			forced-duplex = <1>;
+			forced-speed = <1000>;
+			port_id = <2>;
 		};
 	};
 };
+
 &dp1 {
-	status = "okay";
-	label = "lan";
+	status = "ok";
+	phy-mode = "sgmii";
+};
+
+&dp2 {
+	status = "ok";
 	phy-mode = "sgmii";
 
-};
-&dp2 {
-	status = "okay";
-	label = "wan";
 	fixed-link {
 		speed = <1000>;
 		full-duplex;
@@ -168,21 +165,75 @@
 &mdio0 {
 	status = "okay";
 };
-
 &mdio1 {
 	status = "okay";
-
 	pinctrl-0 = <&mdio1_pins>;
 	pinctrl-names = "default";
-	reset-gpios = <&tlmm 33 GPIO_ACTIVE_LOW>;
-
+	reset-gpios = <&tlmm 26 GPIO_ACTIVE_LOW>;
+	
 	switch1: ethernet-switch@16 {
 		compatible = "qca,qca8337";
 		reg = <16>;
 		#address-cells = <1>;
 		#size-cells = <0>;
-    };
+		
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+			
+			port@6 {
+				reg = <6>;
+				label = "cpu";
+				ethernet = <&dp2>;
+				phy-mode = "sgmii";
+				qca,sgmii-enable-pll;
+
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
+			};
+			port@1 {
+				reg = <1>;
+				label = "lan1";
+				phy-handle = <&qca8337_phy0>;
+			};
+			
+			port@2 {
+				reg = <2>;
+				label = "lan2";
+				phy-handle = <&qca8337_phy1>;
+			};
+			
+			port@3 {
+				reg = <3>;
+				label = "lan3";
+				phy-handle = <&qca8337_phy2>;
+			};
+			port@4 {
+				reg = <4>;
+				label = "wan";
+				phy-handle = <&qca8337_phy3>;
+			};
+		};
+	};
+	
+	qca8337_phy0: ethernet-phy@0 {
+		reg = <0>;
+	};
+	
+	qca8337_phy1: ethernet-phy@1 {
+		reg = <1>;
+	};
+	
+	qca8337_phy2: ethernet-phy@2 {
+		reg = <2>;
+	};
+	qca8337_phy3: ethernet-phy@3 {
+		reg = <3>;
+	};
 };
+
 &tlmm {
 	button_pins: button-state {
 		button-pins {
@@ -243,25 +294,23 @@
 		bias-disable;
 	};
 };
-&q6_region {
-	reg = <0x0 0x4b000000 0x0 0x3000000>;
-};
 &wifi {
 	status = "okay";
-
+	
 	qcom,rproc = <&q6_wcss_pd1>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
-	qcom,ath11k-calibration-variant = "Mercusys-MR80X-V2";
+	qcom,board_id = <0x24>;
 	qcom,ath11k-fw-memory-mode = <1>;
-	qcom,bdf-addr = <0x4c000000>;
+	qcom,bdf-addr = <0x4c400000>;
 };
 
 &wifi1 {
 	status = "okay";
-
+	
 	qcom,rproc = <&q6_wcss_pd2>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
-	qcom,ath11k-calibration-variant = "Mercusys-MR80X-V2-5G";
+	qcom,board_id = <0x60>;
 	qcom,ath11k-fw-memory-mode = <1>;
-	qcom,bdf-addr = <0x4cf00000>;
+	qcom,bdf-addr = <0x4d100000>;
+	qcom,m3-dump-addr = <0x4df00000>;
 };
