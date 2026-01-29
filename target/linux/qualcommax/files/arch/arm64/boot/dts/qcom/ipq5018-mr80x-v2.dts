@@ -79,10 +79,9 @@
 	clock-frequency = <32000>;
 };
 
-&xo_board_clk {
-	clock-div = <4>;
-	clock-mult = <1>;
-};
+ &xo_board_clk {
+ 	clock-frequency = <24000000>;
+ };
 
 &blsp1_uart1 {
 	status = "okay";
@@ -300,7 +299,8 @@
 	qcom,rproc = <&q6_wcss_pd1>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
 	qcom,board_id = <0x24>;
-	qcom,ath11k-fw-memory-mode = <1>;
+	qcom,ath11k-calibration-variant = "Mercusys-MR80X-V2";
+	qcom,ath11k-fw-memory-mode = <2>;
 	qcom,bdf-addr = <0x4c400000>;
 };
 
@@ -310,7 +310,8 @@
 	qcom,rproc = <&q6_wcss_pd2>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
 	qcom,board_id = <0x60>;
-	qcom,ath11k-fw-memory-mode = <1>;
+	qcom,ath11k-calibration-variant = "Mercusys-MR80X-V2-5G";
+	qcom,ath11k-fw-memory-mode = <2>;
 	qcom,bdf-addr = <0x4d100000>;
 	qcom,m3-dump-addr = <0x4df00000>;
 };

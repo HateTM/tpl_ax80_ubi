@@ -42,7 +42,8 @@ define Device/mercusys_mr80x-v2
 	SOC := ipq5018
 	BLOCKSIZE := 128k
 	PAGESIZE := 2048
-	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122
+	DEVICE_PACKAGES := ath11k-firmware-ipq5018-qcn6122 \
+		ipq-wifi-mercusys_mr80x-v2
 endef
 TARGET_DEVICES += mercusys_mr80x-v2
 
