@@ -15,6 +15,8 @@
 	compatible = "mercusys,mr80x-v2", "qcom,ipq5018";
 	
 	aliases {
+		ethernet0 = &dp1;
+		ethernet1 = &dp2;
 		serial0 = &blsp1_uart1;
 		led-boot = &led_power_green;
 		led-failsafe = &led_power_red;
@@ -73,15 +75,24 @@
 			function = LED_FUNCTION_WAN;
 		};
 	};
+	realtek@29{
+		compatible = "realtek,rtl8367s";
+		mii-bus = <&mdio1>;
+		realtek,extif1 = <0 0 10 1 0 0 1 1 4>;
+		switch = <&tlmm 33 0>;
+		cpu-port = <6>;
+		phy-addr = <29>;
+		status = "ok";
+	};
 };
 
 &sleep_clk {
 	clock-frequency = <32000>;
 };
 
- &xo_board_clk {
- 	clock-frequency = <24000000>;
- };
+&xo_board_clk {
+	clock-frequency = <24000000>;
+};
 
 &blsp1_uart1 {
 	status = "okay";
@@ -114,122 +125,107 @@
 	pinctrl-0 = <&qpic_pins>;
 	pinctrl-names = "default";
 	status = "okay";
-	
+
 	nand@0 {
 		compatible = "spi-nand";
 		reg = <0>;
 		nand-ecc-engine = <&qpic_nand>;
 		nand-bus-width = <8>;
+		nand-ecc-strength = <4>;
+		nand-ecc-step-size = <512>;
 		
 		partitions {
 			compatible = "qcom,smem-part";
+
+			partition-0-appsblenv {
+				compatible = "fixed-partitions";
+				label = "0:appsblenv";
+				#address-cells = <1>;
+				#size-cells = <1>;
+
+				partition@0 {
+					label = "env-data";
+					reg = <0x0 0x40000>;
+
+					nvmem-layout {
+						compatible = "u-boot,env";
+
+						macaddr: ethaddr {
+							compatible = "mac-base";
+							#nvmem-cell-cells = <1>;
+						};
+						mac1addr: eth1addr {
+							compatible = "mac-base";
+							#nvmem-cell-cells = <1>;
+						};						
+					};
+				};
+			};
 		};
 	};
 };
 
+
 &switch {
-	status = "ok";
+	status = "okay";
 	
 	switch_mac_mode = <MAC_MODE_SGMII_CHANNEL0>;
 	
 	qcom,port_phyinfo {
+		// MAC0 -> GE Phy -> QCA8337 Phy4
 		port@0 {
 			port_id = <1>;
 			mdiobus = <&mdio0>;
 			phy_address = <7>;
+			// status = "disabled";
 		};
+		
+		// MAC1 ---SGMII---> QCA8337 SerDes
 		port@1 {
-			forced-duplex = <1>;
-			forced-speed = <1000>;
 			port_id = <2>;
+			forced-speed = <2500>;
+			forced-duplex = <1>;
 		};
 	};
 };
-
 &dp1 {
-	status = "ok";
-	phy-mode = "sgmii";
+	status = "okay";
+	nvmem-cells = <&mac1addr 0>;
+	nvmem-cell-names = "mac-address";
 };
 
-&dp2 {
-	status = "ok";
-	phy-mode = "sgmii";
 
+// MAC1 ---SGMII---> SerDes
+&dp2 {
+	status = "okay";
+	phy-mode = "sgmii";
+	mdio-bus = <&mdio1>;
+	nvmem-cells = <&macaddr 0>;
+	nvmem-cell-names = "mac-address";
+	
 	fixed-link {
 		speed = <1000>;
 		full-duplex;
 	};
 };
 
-&mdio0 {
+// IPQ5018 GE Phy -> Phy4
+&ge_phy {
 	status = "okay";
 };
+
+&mdio0 {
+	status = "ok";
+};
+
 &mdio1 {
 	status = "okay";
 	pinctrl-0 = <&mdio1_pins>;
 	pinctrl-names = "default";
-	reset-gpios = <&tlmm 26 GPIO_ACTIVE_LOW>;
+	reset-gpios = <&tlmm 33 GPIO_ACTIVE_LOW>;
 	
-	switch1: ethernet-switch@16 {
-		compatible = "qca,qca8337";
-		reg = <16>;
-		#address-cells = <1>;
-		#size-cells = <0>;
-		
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-			
-			port@6 {
-				reg = <6>;
-				label = "cpu";
-				ethernet = <&dp2>;
-				phy-mode = "sgmii";
-				qca,sgmii-enable-pll;
-
-				fixed-link {
-					speed = <1000>;
-					full-duplex;
-				};
-			};
-			port@1 {
-				reg = <1>;
-				label = "lan1";
-				phy-handle = <&qca8337_phy0>;
-			};
-			
-			port@2 {
-				reg = <2>;
-				label = "lan2";
-				phy-handle = <&qca8337_phy1>;
-			};
-			
-			port@3 {
-				reg = <3>;
-				label = "lan3";
-				phy-handle = <&qca8337_phy2>;
-			};
-			port@4 {
-				reg = <4>;
-				label = "wan";
-				phy-handle = <&qca8337_phy3>;
-			};
-		};
-	};
-	
-	qca8337_phy0: ethernet-phy@0 {
-		reg = <0>;
-	};
-	
-	qca8337_phy1: ethernet-phy@1 {
-		reg = <1>;
-	};
-	
-	qca8337_phy2: ethernet-phy@2 {
-		reg = <2>;
-	};
-	qca8337_phy3: ethernet-phy@3 {
-		reg = <3>;
+	ethernet-phy@0 {
+		reg = <0x1d>;
 	};
 };
 
@@ -292,26 +288,33 @@
 		function = "blsp0_uart0";
 		bias-disable;
 	};
+	switch_reset_pins: switch-reset-state {
+		pins = "gpio33";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-pull-down;
+	};
+};
+&q6v5_wcss {
+	status = "disabled";
 };
 &wifi {
-	status = "okay";
+	status = "disabled";
 	
 	qcom,rproc = <&q6_wcss_pd1>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd1";
-	qcom,board_id = <0x24>;
 	qcom,ath11k-calibration-variant = "Mercusys-MR80X-V2";
-	qcom,ath11k-fw-memory-mode = <2>;
+	qcom,ath11k-fw-memory-mode = <1>;
 	qcom,bdf-addr = <0x4c400000>;
 };
 
 &wifi1 {
-	status = "okay";
+	status = "disabled";
 	
 	qcom,rproc = <&q6_wcss_pd2>;
 	qcom,userpd-subsys-name = "q6v5_wcss_userpd2";
-	qcom,board_id = <0x60>;
 	qcom,ath11k-calibration-variant = "Mercusys-MR80X-V2-5G";
-	qcom,ath11k-fw-memory-mode = <2>;
+	qcom,ath11k-fw-memory-mode = <1>;
 	qcom,bdf-addr = <0x4d100000>;
 	qcom,m3-dump-addr = <0x4df00000>;
 };
