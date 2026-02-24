@@ -3,7 +3,7 @@
 #include <net/dsa.h>
 #include <linux/etherdevice.h>
 #include <linux/if_bridge.h>
-#include <asm/mach-rtl838x/mach-rtl83xx.h>
+#include <asm/mach-rtl-otto/mach-rtl-otto.h>
 
 #include "rtl83xx.h"
 
@@ -544,11 +544,7 @@ static int rtldsa_83xx_setup(struct dsa_switch *ds)
 			priv->r->set_static_move_action(i, true);
 	}
 
-	if (priv->family_id == RTL8380_FAMILY_ID)
-		rtl838x_print_matrix();
-	else
-		rtl839x_print_matrix();
-
+	priv->r->print_matrix();
 	rtldsa_83xx_init_stats(priv);
 	rtldsa_init_counters(priv);
 
@@ -611,15 +607,7 @@ static int rtldsa_93xx_setup(struct dsa_switch *ds)
 		}
 	}
 	priv->r->traffic_set(priv->cpu_port, BIT_ULL(priv->cpu_port));
-
-	/* Configure how MAC gets PHY ability for each port */
-	if (priv->family_id == RTL9310_FAMILY_ID)
-		rtldsa_931x_config_phy_ability_source(priv);
-
-	if (priv->family_id == RTL9300_FAMILY_ID)
-		rtl930x_print_matrix();
-	else if (priv->family_id == RTL9310_FAMILY_ID)
-		rtl931x_print_matrix();
+	priv->r->print_matrix();
 
 	/* TODO: Initialize statistics */
 	rtldsa_init_counters(priv);
@@ -727,22 +715,6 @@ static void rtldsa_83xx_phylink_mac_config(struct dsa_switch *ds, int port,
 	sw_w32(mcr, priv->r->mac_force_mode_ctrl(port));
 }
 
-static void rtldsa_931x_phylink_mac_config(struct dsa_switch *ds, int port,
-					   unsigned int mode,
-					   const struct phylink_link_state *state)
-{
-	struct rtl838x_switch_priv *priv = ds->priv;
-	u32 reg;
-
-	reg = sw_r32(priv->r->mac_force_mode_ctrl(port));
-	pr_info("%s reading FORCE_MODE_CTRL: %08x\n", __func__, reg);
-
-	/* Disable MAC completely so PCS can setup the SerDes */
-	reg = 0;
-
-	sw_w32(reg, priv->r->mac_force_mode_ctrl(port));
-}
-
 static void rtldsa_93xx_phylink_mac_config(struct dsa_switch *ds, int port,
 					   unsigned int mode,
 					   const struct phylink_link_state *state)
@@ -753,11 +725,8 @@ static void rtldsa_93xx_phylink_mac_config(struct dsa_switch *ds, int port,
 	if (port == priv->cpu_port)
 		return;
 
-	if (priv->family_id == RTL9310_FAMILY_ID)
-		return rtldsa_931x_phylink_mac_config(ds, port, mode, state);
-
 	/* Disable MAC completely */
-	sw_w32(0, RTL930X_MAC_FORCE_MODE_CTRL + 4 * port);
+	sw_w32(0, priv->r->mac_force_mode_ctrl(port));
 }
 
 static void rtldsa_83xx_phylink_mac_link_down(struct dsa_switch *ds, int port,
