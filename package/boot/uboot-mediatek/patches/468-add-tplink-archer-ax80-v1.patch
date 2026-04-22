@@ -124,7 +124,7 @@
 +CONFIG_LMB_MAX_REGIONS=64
 --- /dev/null
 +++ b/arch/arm/dts/mt7986a-tplink_archer-ax80-v1-ubi.dts
-@@ -0,0 +1,196 @@
+@@ -0,0 +1,198 @@
 +// SPDX-License-Identifier: GPL-2.0
 +/*
 + * Copyright (c) 2025
@@ -277,23 +277,25 @@
 +};
 +
 +&spi0 {
-+	#address-cells = <1>;
-+	#size-cells = <0>;
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&spi_flash_pins>;
++	#address-cells = <1>;
++	#size-cells = <0>;
 +	status = "okay";
 +	must_tx;
 +	enhance_timing;
 +	dma_ext;
 +	ipm_design;
 +	support_quad;
-+	tick_dly = <1>;
++	tick_dly = <2>;
 +	sample_sel = <0>;
 +
-+	spi_nand@1 {
++	spi_nand@0 {
 +		compatible = "spi-nand";
-+		reg = <1>;
++		reg = <0>;
 +		spi-max-frequency = <52000000>;
++		spi-rx-bus-width = <4>;
++		spi-tx-bus-width = <4>;
 +
 +		partitions {
 +			compatible = "fixed-partitions";
@@ -332,7 +334,7 @@
 +bootcmd=run led_red_static ; run check_buttons ; run boot_production ; run boot_recovery
 +bootconf=config-1
 +bootdelay=0
-+bootfile=openwrt-mediatek-filogic-tplink_archer-ax80-v1-ubi-initramfs-recovery.bin
++bootfile=openwrt-mediatek-filogic-tplink_archer-ax80-v1-ubi-initramfs-recovery.itb
 +bootfile_bl2=openwrt-mediatek-filogic-tplink_archer-ax80-v1-ubi-preloader.bin
 +bootfile_fip=openwrt-mediatek-filogic-tplink_archer-ax80-v1-ubi-bl31-uboot.fip
 +bootfile_upg=openwrt-mediatek-filogic-tplink_archer-ax80-v1-ubi-squashfs-sysupgrade.itb
@@ -354,12 +356,12 @@
 +boot_default=run bootcmd ; run boot_recovery ; replacevol=1 ; run boot_tftp_forever
 +boot_production=run ubi_read_production && bootm $loadaddr#$bootconf || run led_red_static
 +boot_recovery=run ubi_read_recovery && bootm $loadaddr#$bootconf || run led_red_static
-+boot_tftp=run led_tftp_start ; tftpboot $loadaddr $bootfile && run led_tftp_success && bootm $loadaddr#$bootconf || run led_tftp_fail
-+boot_tftp_forever=while true ; do run boot_tftp ; sleep 1 ; done
-+boot_tftp_production=run led_tftp_start ; tftpboot $loadaddr $bootfile_upg && test $replacevol = 1 && iminfo $loadaddr && run ubi_write_production ; if test $noboot = 1 ; then run led_tftp_success ; else run led_tftp_success && bootm $loadaddr#$bootconf ; fi || run led_tftp_fail
-+boot_tftp_recovery=run led_tftp_start ; tftpboot $loadaddr $bootfile && test $replacevol = 1 && iminfo $loadaddr && run ubi_write_recovery ; if test $noboot = 1 ; then run led_tftp_success ; else run led_tftp_success && bootm $loadaddr#$bootconf ; fi || run led_tftp_fail
-+boot_tftp_write_fip=run led_tftp_start ; tftpboot $loadaddr $bootfile_fip && run ubi_write_fip && run reset_factory || run led_tftp_fail
-+boot_tftp_write_bl2=run led_tftp_start ; tftpboot $loadaddr $bootfile_bl2 && run snand_write_bl2 || run led_tftp_fail
++boot_tftp=run led_tftp_start ; tftpboot $loadaddr $bootfile && (test $? -eq 0) && run led_tftp_success && bootm $loadaddr#$bootconf || run led_tftp_fail
++boot_tftp_forever=for i in 1 2 3 4 5 6 7 8 9 10; do run boot_tftp ; sleep 1 ; done ; echo "TFTP retry limit reached" ; run led_red_static
++boot_tftp_production=run led_tftp_start ; tftpboot $loadaddr $bootfile_upg && (test $? -eq 0) && test $replacevol = 1 && iminfo $loadaddr && run ubi_write_production ; if test $noboot = 1 ; then run led_tftp_success ; else run led_tftp_success && bootm $loadaddr#$bootconf ; fi || run led_tftp_fail
++boot_tftp_recovery=run led_tftp_start ; tftpboot $loadaddr $bootfile && (test $? -eq 0) && test $replacevol = 1 && iminfo $loadaddr && run ubi_write_recovery ; if test $noboot = 1 ; then run led_tftp_success ; else run led_tftp_success && bootm $loadaddr#$bootconf ; fi || run led_tftp_fail
++boot_tftp_write_fip=run led_tftp_start ; tftpboot $loadaddr $bootfile_fip && (test $? -eq 0) && run ubi_write_fip && run reset_factory || run led_tftp_fail
++boot_tftp_write_bl2=run led_tftp_start ; tftpboot $loadaddr $bootfile_bl2 && (test $? -eq 0) && run snand_write_bl2 || run led_tftp_fail
 +check_buttons=if button reset ; then run boot_tftp ; fi
 +ethaddr_factory=mtd read factory 0x40080000 0x0 0x20000 && env readmem -b ethaddr 0x40088000 0x6
 +reset_factory=mw $loadaddr 0xff 0x1f000 ; ubi write $loadaddr ubootenv 0x1f000 ; ubi write $loadaddr ubootenv2 0x1f000 ; ubi remove rootfs_data
@@ -390,6 +392,6 @@
 +led_red_static=i2c dev $led_bus ; i2c mw $led_addr 0x00 $led_enable 1 ; i2c mw $led_addr 0x36 $led_misc 1 ; i2c mw $led_addr $led_curr_red 0x14 1 ; i2c mw $led_addr $led_pwm_red 0xff 1 ; i2c mw $led_addr $led_pwm_green 0x00 1 ; i2c mw $led_addr $led_pwm_blue 0x00 1
 +led_green_static=run led_off ; i2c dev $led_bus ; i2c mw $led_addr 0x00 $led_enable 1 ; i2c mw $led_addr 0x36 $led_misc 1 ; i2c mw $led_addr $led_curr_green 0x14 1 ; i2c mw $led_addr $led_pwm_red 0x00 1 ; i2c mw $led_addr $led_pwm_green 0xff 1 ; i2c mw $led_addr $led_pwm_blue 0x00 1
 +led_green_blink=for i in 1 2 3 4 5; do run led_green_static; sleep 1; run led_off; sleep 1; done
-+led_tftp_start=run led_off ; while true; do run led_green_static; sleep 0.5; run led_off; sleep 0.5; if test -n "$tftp_active"; then break; fi; done
++led_tftp_start=run led_off ; run led_green_static
 +led_tftp_success=setenv tftp_active 1; run led_green_static
 +led_tftp_fail=setenv tftp_active 1; run led_red_static
