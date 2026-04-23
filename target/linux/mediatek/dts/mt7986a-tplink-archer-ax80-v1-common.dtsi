@@ -1,5 +1,6 @@
-// SPDX-License-Identifier: (GPL-2.0 OR MIT)
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
 
+/dts-v1/;
 #include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/leds/common.h>
@@ -9,10 +10,10 @@
 
 / {
 	aliases: aliases {
-		led-boot = &led_b;
-		led-failsafe = &led_r;
-		led-running = &led_b;
-		led-upgrade = &led_g;
+		led-boot = &led_status_blue;
+		led-failsafe = &led_status_red;
+		led-running = &led_status_blue;
+		led-upgrade = &led_status_green;
 		serial0 = &uart0;
 	};
 	
@@ -20,12 +21,12 @@
 		stdout-path = "serial0:115200n8";
 	};
 	
-	memory {
+	memory@40000000 {
 		reg = <0 0x40000000 0 0x20000000>;
 		device_type = "memory";
 	};
 	
-	gpio-keys {
+	keys {
 		compatible = "gpio-keys";
 		
 		button-reset {
@@ -51,15 +52,6 @@
 			linux,code = <KEY_RFKILL>;
 			gpios = <&pio 16 GPIO_ACTIVE_LOW>;
 		};
-	};
-	
-	reg_1p8v: regulator-1p8v {
-		compatible = "regulator-fixed";
-		regulator-name = "fixed-1.8V";
-		regulator-min-microvolt = <1800000>;
-		regulator-max-microvolt = <1800000>;
-		regulator-boot-on;
-		regulator-always-on;
 	};
 	
 	reg_3p3v: regulator-3p3v {
@@ -96,14 +88,19 @@
 		compatible = "mediatek,eth-mac";
 		reg = <0>;
 		phy-mode = "2500base-x";
-		phy-handle = <&phy6>;
+		
+		fixed-link {
+			speed = <2500>;
+			full-duplex;
+			pause;
+		};
 	};
 	
 	gmac1: mac@1 {
 		compatible = "mediatek,eth-mac";
 		reg = <1>;
+		phy-handle = <&phy6>;
 		phy-mode = "2500base-x";
-		phy-handle = <&phy5>;
 	};
 	
 	mdio: mdio-bus {
@@ -113,11 +110,6 @@
 		reset-gpios = <&pio 6 GPIO_ACTIVE_LOW>;
 		reset-delay-us = <1500000>;
 		reset-post-delay-us = <1000000>;
-		
-		phy5: ethernet-phy@5 {
-			compatible = "ethernet-phy-ieee802.3-c45";
-			reg = <5>;
-		};
 		
 		phy6: ethernet-phy@6 {
 			compatible = "ethernet-phy-ieee802.3-c45";
@@ -154,7 +146,6 @@
 				};
 				port@6 {
 					reg = <6>;
-					label = "cpu";
 					ethernet = <&gmac0>;
 					phy-mode = "2500base-x";
 					fixed-link {
@@ -181,7 +172,7 @@
 		status = "okay";
 		clock-mode = /bits/ 8 <1>;
 		
-		led_b: led@0 {
+		led_status_blue: led@0 {
 			label = "blue";
 			led-cur = /bits/ 8 <0x14>;
 			max-cur = /bits/ 8 <0x20>;
@@ -189,7 +180,7 @@
 			color = <LED_COLOR_ID_BLUE>;
 		};
 		
-		led_g: led@3 {
+		led_status_green: led@3 {
 			label = "green";
 			led-cur = /bits/ 8 <0x14>;
 			max-cur = /bits/ 8 <0x20>;
@@ -197,7 +188,7 @@
 			color = <LED_COLOR_ID_GREEN>;
 		};
 		
-		led_r: led@6 {
+		led_status_red: led@6 {
 			label = "red";
 			led-cur = /bits/ 8 <0x14>;
 			max-cur = /bits/ 8 <0x20>;
@@ -245,13 +236,13 @@
 		};
 		conf-pu {
 			pins = "SPI2_CS", "SPI2_HOLD", "SPI2_WP";
-			drive-strength = <MTK_DRIVE_8mA>;
-			bias-disable; /* bias-disable */
+			drive-strength = <MTK_DRIVE_4mA>;
+			bias-disable;
 		};
 		conf-pd {
 			pins = "SPI2_CLK", "SPI2_MOSI", "SPI2_MISO";
-			drive-strength = <MTK_DRIVE_8mA>;
-			bias-disable; /* bias-disable */
+			drive-strength = <MTK_DRIVE_4mA>;
+			bias-disable;
 		};
 	};
 	

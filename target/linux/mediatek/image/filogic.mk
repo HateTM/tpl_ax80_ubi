@@ -2695,7 +2695,8 @@ endef
 TARGET_DEVICES += tplink_archer-ax80-v1
 
 define Device/tplink_archer-ax80-v1-ubi
-$(call Device/tplink_archer-ax80-v1)
+  DEVICE_VENDOR := TP-Link
+  DEVICE_MODEL := Archer AX80
   DEVICE_VARIANT := v1 (UBI)
   DEVICE_DTS := mt7986a-tplink-archer-ax80-v1-ubi
   DEVICE_DTS_DIR := ../dts
@@ -2703,18 +2704,22 @@ $(call Device/tplink_archer-ax80-v1)
   DEVICE_DTS_LOADADDR := 0x43f00000
   KERNEL_IN_UBI := 1
   UBOOTENV_IN_UBI := 1
+  UBINIZE_OPTS := -E 5
+  BLOCKSIZE := 128k
+  PAGESIZE := 2048
   IMAGES := sysupgrade.itb
   KERNEL_INITRAMFS_SUFFIX := -recovery.itb
   KERNEL := kernel-bin | gzip
   KERNEL_INITRAMFS := kernel-bin | lzma | \
-	fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | \
-	pad-to 64k
+  fit lzma $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb with-initrd | \
+  pad-to 64k
   IMAGE/sysupgrade.itb := append-kernel | \
-	fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-rootfs | \
-	append-metadata
+  fit gzip $$(KDIR)/image-$$(firstword $$(DEVICE_DTS)).dtb external-with-rootfs | \
+  append-metadata
+  DEVICE_PACKAGES := kmod-leds-lp5523 kmod-usb3 kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware
   ARTIFACTS := bl31-uboot.fip preloader.bin
-  ARTIFACT/bl31-uboot.fip := mt7986-bl31-uboot tplink_archer-ax80-v1-ubi
   ARTIFACT/preloader.bin := mt7986-bl2 spim-nand-ubi-ddr3
+  ARTIFACT/bl31-uboot.fip := mt7986-bl31-uboot tplink_archer-ax80-v1-ubi
 endef
 TARGET_DEVICES += tplink_archer-ax80-v1-ubi
 
