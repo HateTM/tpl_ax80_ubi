@@ -40,6 +40,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Restore ccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ccache
+          # The key is unique per commit so every run saves a fresh cache;
+          # restore-keys then picks the most recent one on the next run.
+          key: ccache-mediatek-filogic-${{ github.sha }}
+          restore-keys: |
+            ccache-mediatek-filogic-
+
       - name: Update and install feeds
         run: |
           ./scripts/feeds update -a
@@ -86,6 +96,7 @@ jobs:
           cat >> .config <<EOF
           CONFIG_DEVEL=y
           CONFIG_AUTOREMOVE=y
+          CONFIG_CCACHE=y
           CONFIG_EXTERNAL_TOOLCHAIN_IB=y
           CONFIG_IMAGEOPT=y
           CONFIG_VERSIONOPT=y
@@ -99,6 +110,10 @@ jobs:
           # rather than silently spending an hour rebuilding it.
           grep -q '^CONFIG_EXTERNAL_TOOLCHAIN=y' .config || {
             echo "external toolchain was not configured" >&2
+            exit 1
+          }
+          grep -q '^CONFIG_CCACHE=y' .config || {
+            echo "ccache was not configured" >&2
             exit 1
           }
 
@@ -119,6 +134,19 @@ jobs:
 
       - name: Build
         run: make -j$(nproc) || make -j1 V=sc
+
+      - name: Show ccache statistics
+        if: always()
+        run: CCACHE_DIR="$PWD/.ccache" staging_dir/host/bin/ccache --show-stats || true
+
+      # Save even after a failed build so the objects compiled so far are not
+      # lost; the plain actions/cache post step only saves on success.
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: .ccache
+          key: ccache-mediatek-filogic-${{ github.sha }}
 
       - name: Collect release assets
         run: |
