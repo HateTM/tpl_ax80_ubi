@@ -35,7 +35,7 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             build-essential clang flex bison g++ gawk gcc-multilib g++-multilib \
             gettext git libncurses-dev libssl-dev python3-setuptools rsync swig \
-            unzip zlib1g-dev file wget
+            unzip zlib1g-dev file wget zstd
 
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,15 +45,43 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+      - name: Download prebuilt toolchain
+        run: |
+          # OpenWrt publishes a toolchain per target; using it skips the
+          # tools/ and toolchain/ build stages, which dominate the runtime.
+          BASE="https://downloads.cdn.openwrt.org/snapshots/targets/mediatek/filogic"
+          TOOLCHAIN_FILE="$(curl -sSf "$BASE/sha256sums" | grep -oE 'openwrt-toolchain[^ ]*\.tar\.zst' | head -n1)"
+          if [ -z "$TOOLCHAIN_FILE" ]; then
+            echo "No prebuilt toolchain published for this target" >&2
+            exit 1
+          fi
+          echo "Using $TOOLCHAIN_FILE"
+          curl -sSfLO "$BASE/$TOOLCHAIN_FILE"
+          tar --zstd -xf "$TOOLCHAIN_FILE"
+          echo "TOOLCHAIN_DIR=${TOOLCHAIN_FILE%.tar.zst}" >> "$GITHUB_ENV"
+
       - name: Write build configuration
         run: |
+          # ext-toolchain.sh writes a fresh .config for the target wired to the
+          # prebuilt toolchain; --overwrite-config replaces any existing file,
+          # so our own settings are appended only after it has run.
+          ./scripts/ext-toolchain.sh \
+            --toolchain "$TOOLCHAIN_DIR"/toolchain-* \
+            --overwrite-config \
+            --config mediatek/filogic
+
+          # CONFIG_IB depends on "!EXTERNAL_TOOLCHAIN || EXTERNAL_TOOLCHAIN_IB",
+          # so the Image Builder needs EXTERNAL_TOOLCHAIN_IB here, and that
+          # option is only selectable with DEVEL set.
           # IMAGEOPT and VERSIONOPT must be set for VERSION_NUMBER to take effect.
-          # VERSION_CODE_FILENAMES is disabled so git revision stays out of filenames;
-          # the installer builds filenames from version alone and won't find them otherwise.
-          # Asset filenames embed ${RELEASE_TAG} - mismatch with config breaks the installer.
-          cat > .config <<EOF
-          CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_filogic=y
+          # VERSION_CODE_FILENAMES is disabled so the git revision stays out of
+          # the image filenames; the installer builds the names it downloads from
+          # the version alone and would not find them otherwise. The release tag
+          # and CONFIG_VERSION_NUMBER must therefore stay identical.
+          cat >> .config <<EOF
+          CONFIG_DEVEL=y
+          CONFIG_AUTOREMOVE=y
+          CONFIG_EXTERNAL_TOOLCHAIN_IB=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_archer-ax80-v1-ubi=y
           CONFIG_IMAGEOPT=y
           CONFIG_VERSIONOPT=y
@@ -62,6 +90,13 @@ jobs:
           # CONFIG_VERSION_CODE_FILENAMES is not set
           EOF
           make defconfig
+
+          # Fail early and loudly if the prebuilt toolchain did not take effect,
+          # rather than silently spending an hour rebuilding it.
+          grep -q '^CONFIG_EXTERNAL_TOOLCHAIN=y' .config || {
+            echo "external toolchain was not configured" >&2
+            exit 1
+          }
 
       - name: Build
         run: make -j$(nproc) || make -j1 V=sc
