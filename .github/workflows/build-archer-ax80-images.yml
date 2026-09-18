@@ -62,9 +62,14 @@ jobs:
 
       - name: Write build configuration
         run: |
-          # ext-toolchain.sh writes a fresh .config for the target wired to the
-          # prebuilt toolchain; --overwrite-config replaces any existing file,
-          # so our own settings are appended only after it has run.
+          # ext-toolchain.sh appends the toolchain settings to .config and then
+          # runs "make defconfig" itself. That first defconfig pins the package
+          # defaults of whichever profile is active into .config, and a later
+          # profile switch does not revisit them (profile packages are Kconfig
+          # defaults, not selects). With no device chosen it would pin the
+          # target's DEFAULT_PROFILE (openwrt_one), so the device is selected
+          # before the script runs.
+          echo 'CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_archer-ax80-v1-ubi=y' > .config
           ./scripts/ext-toolchain.sh \
             --toolchain "$TOOLCHAIN_DIR"/toolchain-* \
             --overwrite-config \
@@ -82,7 +87,6 @@ jobs:
           CONFIG_DEVEL=y
           CONFIG_AUTOREMOVE=y
           CONFIG_EXTERNAL_TOOLCHAIN_IB=y
-          CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_archer-ax80-v1-ubi=y
           CONFIG_IMAGEOPT=y
           CONFIG_VERSIONOPT=y
           CONFIG_VERSION_NUMBER="${RELEASE_TAG}"
@@ -97,6 +101,21 @@ jobs:
             echo "external toolchain was not configured" >&2
             exit 1
           }
+
+          # Likewise verify that the device profile and every package it lists
+          # actually made it into .config, otherwise the images build without
+          # Wi-Fi firmware and LED support and only the installer notices.
+          PROFILE="DEVICE_tplink_archer-ax80-v1-ubi"
+          grep -q "^CONFIG_TARGET_PROFILE=\"${PROFILE}\"" .config || {
+            echo "device profile ${PROFILE} was not selected" >&2
+            exit 1
+          }
+          for pkg in $(sed -n "/^Target-Profile: ${PROFILE}\$/,/^@@/s/^Target-Profile-Packages: //p" tmp/.targetinfo); do
+            grep -q "^CONFIG_PACKAGE_${pkg}=y" .config || {
+              echo "device package ${pkg} was not selected" >&2
+              exit 1
+            }
+          done
 
       - name: Build
         run: make -j$(nproc) || make -j1 V=sc
