@@ -86,13 +86,13 @@
 &wifi {
 	nvmem-cells = <&eeprom_factory_0>;
 	nvmem-cell-names = "eeprom";
-	
+
 	band@0 {
 		reg = <0>;
 		nvmem-cells = <&macaddr_factory_8000 0>;
 		nvmem-cell-names = "mac-address";
 	};
-	
+
 	band@1 {
 		reg = <1>;
 		nvmem-cells = <&macaddr_factory_8000 (-1)>;

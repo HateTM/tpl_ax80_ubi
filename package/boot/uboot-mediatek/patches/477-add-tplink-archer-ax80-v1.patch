@@ -428,7 +428,7 @@ Signed-off-by: Sergey Shlukov <ichizakurain@gmail.com>
 +
 +led_green_blink=for i in 1 2 3 4 5; do run led_green_static; sleep 1; run led_off; sleep 1; done
 +
-+led_tftp_start=run led_off ; for i in 1 2 3 4 5 6 7 8 9 10; do run led_green_static; sleep 0.5; run led_off; sleep 0.5; done
++led_tftp_start=run led_green_static
 +
-+led_tftp_success=setenv tftp_active 1; run led_green_static
-+led_tftp_fail=setenv tftp_active 1; run led_red_static
++led_tftp_success=run led_green_static
++led_tftp_fail=run led_red_static

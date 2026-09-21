@@ -3459,13 +3459,7 @@ endef
 TARGET_DEVICES += tplink_archer-ax80-v1
 
 define Device/tplink_archer-ax80-v1-ubi
-  DEVICE_VENDOR := TP-Link
-  DEVICE_MODEL := Archer AX80
-  DEVICE_DTS_DIR := ../dts
-  DEVICE_PACKAGES := kmod-leds-lp5523 kmod-usb3 kmod-mt7915e kmod-mt7986-firmware mt7986-wo-firmware
-  UBINIZE_OPTS := -E 5
-  BLOCKSIZE := 128k
-  PAGESIZE := 2048
+  $(call Device/tplink_archer-ax80-v1)
   DEVICE_VARIANT := v1 (UBI)
   DEVICE_DTS := mt7986a-tplink-archer-ax80-v1-ubi
   DEVICE_DTC_FLAGS := --pad 4096
